@@ -43,8 +43,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
                     "/api/usuarios/cadastro",
-                    "/api/usuarios/login",
-                    "/api/usuarios/logout"
+                    "/api/usuarios/login"
                 ).permitAll()
                 .anyRequest().authenticated()
             );

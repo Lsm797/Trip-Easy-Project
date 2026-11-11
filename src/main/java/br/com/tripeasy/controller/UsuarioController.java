@@ -10,8 +10,8 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.context.SecurityContextRepository;
-import org.springframework.web.bind.annotation.*;
 import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
+import org.springframework.web.bind.annotation.*;
 
 import br.com.tripeasy.dto.UsuarioCadastroDTO;
 import br.com.tripeasy.dto.UsuarioLoginDTO;
@@ -20,6 +20,7 @@ import br.com.tripeasy.service.UsuarioService;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/usuarios")
@@ -42,7 +43,7 @@ public class UsuarioController {
 
     @PostMapping("/cadastro")
     public ResponseEntity<String> cadastrar(
-            @RequestBody UsuarioCadastroDTO dados) {
+            @Valid @RequestBody UsuarioCadastroDTO dados) {
 
         Usuario usuario = new Usuario();
 
@@ -59,7 +60,7 @@ public class UsuarioController {
 
     @PostMapping("/login")
     public ResponseEntity<String> login(
-            @RequestBody UsuarioLoginDTO dados,
+            @Valid @RequestBody UsuarioLoginDTO dados,
             HttpServletRequest request,
             HttpServletResponse response) {
 
@@ -84,7 +85,6 @@ public class UsuarioController {
         return ResponseEntity.ok("Login realizado com sucesso!");
     }
 
-    
     @PostMapping("/logout")
     public ResponseEntity<String> logout(
             HttpServletRequest request,
@@ -100,7 +100,7 @@ public class UsuarioController {
         );
 
         return ResponseEntity.ok("Logout realizado com sucesso!");
-}
+    }
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<String> tratarErro(
