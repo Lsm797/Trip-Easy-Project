@@ -1,0 +1,17 @@
+Fotos dos destinos
+==================
+Coloque aqui uma foto por cidade (jpg, jpeg, png ou webp). O sistema usa a foto
+automaticamente, sem mexer no codigo. O nome do arquivo e o nome da cidade em
+minusculas, sem acento e com hifen no lugar dos espacos:
+
+  salvador.jpg
+  florianopolis.jpg
+  porto-seguro.jpg
+  foz-do-iguacu.jpg
+  bonito.jpg
+  paris.jpg
+  lisboa.jpg
+  buenos-aires.jpg
+
+Dica: use fotos horizontais, com uns 800 a 1200 px de largura (ate ~200 KB cada),
+para o sistema carregar rapido.
