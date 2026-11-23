@@ -51,8 +51,9 @@ export function renderDespesasView(state, activeTrip) {
       ? activeTrip.expenses
       : activeTrip.expenses.filter((e) => e.category === selectedCat);
 
-  const topCategory =
-    categoryPercentages['Hospedagem'] >= categoryPercentages['Alimentação'] ? 'Hospedagem' : 'Alimentação';
+  const topCategory = totalSpent > 0
+    ? CATEGORIES.reduce((best, cat) => (categoryTotals[cat] > categoryTotals[best] ? cat : best), CATEGORIES[0])
+    : '';
 
   return `
     <div class="stack-lg animate-fade-in">
@@ -103,7 +104,22 @@ export function renderDespesasView(state, activeTrip) {
               <span class="tabular-nums" style="font-size:0.78rem;font-weight:600;color:var(--stone-400);margin-left:0.4rem;">
                 de R$ ${formatBRL(budgetLimit)} planejados
               </span>
+              ${state.editingBudget ? '' : `
+                <button type="button" class="btn btn-ghost btn-sm" data-action="edit-budget" style="margin-left:0.4rem;">
+                  ${icon('edit', 'icon-xs')}<span>Alterar orçamento</span>
+                </button>
+              `}
             </div>
+
+            ${state.editingBudget ? `
+              <form id="budget-edit-form" style="display:flex;gap:0.5rem;align-items:center;margin-top:0.85rem;flex-wrap:wrap;">
+                <input type="number" id="budget-edit-input" class="field-input" min="0" step="0.01"
+                  style="max-width:180px;" value="${escapeHtml(String(activeTrip.budgetLimit ?? 0))}" />
+                <button type="submit" class="btn btn-primary btn-sm">Salvar</button>
+                <button type="button" class="btn btn-secondary btn-sm" data-action="cancel-budget-edit">Cancelar</button>
+                ${state.budgetError ? `<span style="font-size:0.74rem;font-weight:700;color:var(--red-600);">${escapeHtml(state.budgetError)}</span>` : ''}
+              </form>
+            ` : ''}
 
             <div style="margin-top:1.25rem;">
               <div class="progress-track">
@@ -161,7 +177,9 @@ export function renderDespesasView(state, activeTrip) {
 
           <div style="background:var(--brand-50);border:1px solid var(--brand-100);border-radius:1rem;padding:0.75rem;display:flex;align-items:flex-start;gap:0.5rem;font-size:0.74rem;font-weight:600;color:var(--brand-900);">
             <span style="color:var(--sunset-500);display:flex;margin-top:2px;">${icon('sparkles', 'icon-sm')}</span>
-            <span>A maior fatia de gastos da viagem recai sobre ${topCategory}.</span>
+            <span>${topCategory
+              ? `A maior fatia de gastos da viagem recai sobre ${escapeHtml(topCategory)}.`
+              : 'Cadastre despesas para ver a análise por categoria.'}</span>
           </div>
         </div>
       </div>
@@ -217,6 +235,15 @@ export function renderDespesasView(state, activeTrip) {
                 </span>
                 <button
                   type="button"
+                  class="btn btn-secondary btn-sm"
+                  data-action="edit-expense"
+                  data-exp-id="${escapeHtml(exp.id)}"
+                  title="Editar despesa"
+                >
+                  ${icon('edit', 'icon-xs')}<span>Editar</span>
+                </button>
+                <button
+                  type="button"
                   class="btn btn-danger-soft btn-sm"
                   data-action="delete-expense"
                   data-exp-id="${escapeHtml(exp.id)}"
@@ -234,7 +261,7 @@ export function renderDespesasView(state, activeTrip) {
           <div class="modal-card animate-modal-in">
             <div class="modal-header">
               <h3 id="expense-modal-title" style="margin:0;font-size:1.05rem;font-weight:800;color:var(--stone-900);">
-                Registrar Nova Despesa
+                ${state.editingExpenseId ? 'Editar Despesa' : 'Registrar Nova Despesa'}
               </h3>
               <button type="button" class="btn btn-secondary btn-icon" style="width:32px;height:32px;min-height:32px;" data-action="close-expense-modal" aria-label="Fechar">
                 ${icon('x', 'icon-sm')}
@@ -288,7 +315,7 @@ export function renderDespesasView(state, activeTrip) {
                   </select>
                 </div>
                 <button type="submit" class="btn btn-sunset" style="width:100%;min-height:44px;margin-top:0.5rem;font-weight:800;">
-                  Salvar Despesa
+                  ${state.editingExpenseId ? 'Salvar Alterações' : 'Salvar Despesa'}
                 </button>
               </form>
             </div>
@@ -307,8 +334,23 @@ export function bindDespesasEvents(container, state, activeTrip, { updateState, 
 
     if (action === 'filter-expense-cat') {
       updateState({ selectedExpenseCategory: btn.dataset.cat });
+    } else if (action === 'edit-expense') {
+      const exp = activeTrip.expenses.find((item) => item.id === btn.dataset.expId);
+      if (!exp) return;
+      updateState({
+        showAddExpenseModal: true,
+        editingExpenseId: exp.id,
+        expenseModalError: '',
+        expenseDraft: {
+          description: exp.description,
+          value: String(exp.value),
+          category: exp.category,
+          dateStr: isValidIso(exp.dateIso) ? exp.dateIso : todayIso(),
+        },
+      });
     } else if (action === 'open-expense-modal') {
       updateState({
+        editingExpenseId: null,
         showAddExpenseModal: true,
         expenseModalError: '',
         expenseDraft: {
@@ -320,7 +362,7 @@ export function bindDespesasEvents(container, state, activeTrip, { updateState, 
       });
     } else if (action === 'close-expense-modal' || action === 'close-expense-backdrop') {
       if (action === 'close-expense-backdrop' && e.target !== btn) return;
-      updateState({ showAddExpenseModal: false, expenseModalError: '' });
+      updateState({ showAddExpenseModal: false, expenseModalError: '', editingExpenseId: null });
     } else if (action === 'delete-expense') {
       const expId = btn.dataset.expId;
       onUpdateTrip({
@@ -338,8 +380,28 @@ export function bindDespesasEvents(container, state, activeTrip, { updateState, 
       updateState({ expenseFeedback: 'Relatório financeiro copiado para a área de transferência.' });
     } else if (action === 'dismiss-expense-feedback') {
       updateState({ expenseFeedback: '' });
+    } else if (action === 'edit-budget') {
+      updateState({ editingBudget: true, budgetError: '' });
+    } else if (action === 'cancel-budget-edit') {
+      updateState({ editingBudget: false, budgetError: '' });
     }
   });
+
+  const budgetForm = container.querySelector('#budget-edit-form');
+  if (budgetForm && activeTrip) {
+    budgetForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const value = Number(budgetForm.querySelector('#budget-edit-input').value);
+      if (Number.isNaN(value) || value < 0) {
+        updateState({ budgetError: 'Informe um valor válido.' });
+        return;
+      }
+      state.editingBudget = false;
+      state.budgetError = '';
+      state.expenseFeedback = 'Orçamento atualizado.';
+      onUpdateTrip({ ...activeTrip, budgetLimit: value });
+    });
+  }
 
   const form = container.querySelector('#add-expense-form');
   if (form && activeTrip) {
@@ -367,6 +429,29 @@ export function bindDespesasEvents(container, state, activeTrip, { updateState, 
       }
 
       const dateIso = isValidIso(state.expenseDraft.dateStr) ? state.expenseDraft.dateStr : todayIso();
+      if (state.editingExpenseId) {
+        const editedId = state.editingExpenseId;
+        state.showAddExpenseModal = false;
+        state.expenseModalError = '';
+        state.editingExpenseId = null;
+        state.expenseFeedback = `Despesa "${desc}" atualizada.`;
+        onUpdateTrip({
+          ...activeTrip,
+          expenses: activeTrip.expenses.map((item) =>
+            item.id === editedId
+              ? {
+                  ...item,
+                  description: desc,
+                  category: state.expenseDraft.category || item.category,
+                  value: valFloat,
+                  dateIso,
+                  dateStr: formatLongDate(dateIso),
+                }
+              : item
+          ),
+        });
+        return;
+      }
       const newExpense = {
         id: `exp-${Date.now()}`,
         description: desc,

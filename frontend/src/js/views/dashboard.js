@@ -44,9 +44,15 @@ export function renderDashboardView(state, activeTrip) {
           </p>
         </div>
 
-        <button type="button" class="btn btn-secondary btn-icon" style="width:42px;height:42px;" data-action="open-share" title="Compartilhar Viagem" id="btn-share-trip">
-          ${icon('share', 'icon-md')}
-        </button>
+        <div class="row-gap">
+          <button type="button" class="btn btn-sunset" data-nav="itinerario" id="btn-fab-planning">
+            ${icon('plus', 'icon-sm')}
+            <span>Planejar Atividade</span>
+          </button>
+          <button type="button" class="btn btn-secondary btn-icon" style="width:42px;height:42px;" data-action="open-share" title="Compartilhar Viagem" id="btn-share-trip">
+            ${icon('share', 'icon-md')}
+          </button>
+        </div>
       </div>
 
       ${state.dashboardToast ? `
@@ -216,11 +222,6 @@ export function renderDashboardView(state, activeTrip) {
           </div>
         </div>
       ` : ''}
-
-      <button type="button" class="fab-button" data-nav="itinerario" id="btn-fab-planning">
-        ${icon('plus', 'icon-md')}
-        <span>Planejar Atividade</span>
-      </button>
     </div>
   `;
 }

@@ -1,5 +1,6 @@
-import { ASSETS } from '../data.js';
+import { ASSETS, getSuggestedActivities } from '../data.js';
 import { icon } from '../icons.js';
+import { to24h, maskTime } from '../dates.js';
 import { escapeHtml, renderImgWithFallback } from '../utils.js';
 
 export function renderItinerarioView(state, activeTrip) {
@@ -61,8 +62,8 @@ export function renderItinerarioView(state, activeTrip) {
           </div>
         </div>
 
-        <form id="itinerary-add-form" style="margin-bottom:1.5rem;display:flex;gap:0.5rem;">
-          <div class="input-with-icon" style="flex:1;">
+        <form id="itinerary-add-form" style="margin-bottom:1.5rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
+          <div class="input-with-icon" style="flex:1 1 220px;min-width:0;">
             <span class="input-with-icon__left">${icon('search', 'icon-sm')}</span>
             <input
               type="text"
@@ -73,11 +74,34 @@ export function renderItinerarioView(state, activeTrip) {
               value="${escapeHtml(state.newActivityTitle || '')}"
             />
           </div>
+          <input
+            type="text"
+            id="itinerary-location-input"
+            class="field-input"
+            style="height:46px;border-radius:1rem;flex:1 1 130px;min-width:0;"
+            placeholder="Local (opcional)"
+            maxlength="150"
+            value="${escapeHtml(state.newActivityLocation || '')}"
+          />
+          <input
+            type="text"
+            id="itinerary-time-input"
+            class="field-input"
+            style="height:46px;border-radius:1rem;flex:0 0 84px;text-align:center;"
+            inputmode="numeric"
+            maxlength="5"
+            placeholder="14:30"
+            value="${escapeHtml(state.newActivityTime || '')}"
+            title="Horário (24h, ex: 14:30)"
+          />
           <button type="submit" class="btn btn-primary" style="height:46px;border-radius:1rem;">
             ${icon('plus', 'icon-sm')}
             <span>Adicionar</span>
           </button>
         </form>
+        ${state.activityError ? `
+          <p style="margin:-1rem 0 1rem;font-size:0.76rem;font-weight:700;color:var(--red-600);">${escapeHtml(state.activityError)}</p>
+        ` : ''}
 
         <div style="flex:1;">
           ${activeTrip.itinerary.length === 0 ? `
@@ -119,8 +143,10 @@ export function renderItinerarioView(state, activeTrip) {
                               id="edit-act-time"
                               class="field-input"
                               style="height:36px;background:#fff;"
-                              value="${escapeHtml(state.editingTime)}"
-                              placeholder="Horário (ex: 09:00 AM)"
+                              inputmode="numeric"
+                              maxlength="5"
+                              placeholder="Horário (ex: 14:30)"
+                              value="${escapeHtml(state.editingTime || '')}"
                             />
                             <input
                               type="text"
@@ -131,6 +157,15 @@ export function renderItinerarioView(state, activeTrip) {
                               placeholder="Nome da atividade"
                             />
                           </div>
+                          <input
+                            type="text"
+                            id="edit-act-location"
+                            class="field-input"
+                            style="height:36px;background:#fff;"
+                            maxlength="150"
+                            value="${escapeHtml(state.editingLocation || '')}"
+                            placeholder="Local (opcional)"
+                          />
                           <textarea
                             id="edit-act-desc"
                             class="field-textarea"
@@ -156,6 +191,11 @@ export function renderItinerarioView(state, activeTrip) {
                               <span class="tabular-nums">${escapeHtml(act.time)}</span>
                             </div>
                             <h4 style="margin:0.25rem 0 0;font-size:0.9rem;font-weight:800;color:var(--stone-900);">${escapeHtml(act.title)}</h4>
+                            ${act.location ? `
+                              <div style="display:flex;align-items:center;gap:0.3rem;margin-top:0.2rem;font-size:0.72rem;font-weight:700;color:var(--brand-600);">
+                                ${icon('mapPin', 'icon-xs')}<span>${escapeHtml(act.location)}</span>
+                              </div>
+                            ` : ''}
                             <p style="margin:0.25rem 0 0;font-size:0.78rem;font-weight:500;color:var(--stone-600);line-height:1.5;">
                               ${escapeHtml(act.description)}
                             </p>
@@ -244,16 +284,33 @@ export function bindItinerarioEvents(container, state, activeTrip, { updateState
         state.newActivityTitle = input.value;
       });
     }
+    const locInput = addForm.querySelector('#itinerary-location-input');
+    if (locInput) locInput.addEventListener('input', () => { state.newActivityLocation = locInput.value; });
+    const timeInput = addForm.querySelector('#itinerary-time-input');
+    if (timeInput) {
+      timeInput.addEventListener('input', () => {
+        timeInput.value = maskTime(timeInput.value);
+        state.newActivityTime = timeInput.value;
+      });
+    }
     addForm.addEventListener('submit', (e) => {
       e.preventDefault();
       const title = (state.newActivityTitle || '').trim();
       if (!title) return;
+      const timeText = (state.newActivityTime || '').trim();
+      const time24 = timeText ? to24h(timeText) : '09:00';
+      if (!time24) {
+        updateState({ activityError: 'Horário inválido. Use o formato 24h, por exemplo 14:30.' });
+        return;
+      }
+      state.activityError = '';
       const dayNum = state.selectedDayNumber || 1;
       const newAct = {
         id: `act-${Date.now()}`,
-        time: '11:00 AM',
+        time: time24,
         title,
-        description: 'Atividade adicionada manualmente ao itinerário.',
+        location: (state.newActivityLocation || '').trim(),
+        description: '',
         icon: 'compass',
       };
       const updatedItinerary = activeTrip.itinerary.map((d) => ({ ...d, activities: [...d.activities] }));
@@ -264,6 +321,7 @@ export function bindItinerarioEvents(container, state, activeTrip, { updateState
       }
       targetDay.activities.push(newAct);
       state.newActivityTitle = '';
+      state.newActivityLocation = '';
       state.activePin = newAct.id;
       onUpdateTrip({ ...activeTrip, itinerary: updatedItinerary });
     });
@@ -273,7 +331,14 @@ export function bindItinerarioEvents(container, state, activeTrip, { updateState
   const editTimeInput = container.querySelector('#edit-act-time');
   const editTitleInput = container.querySelector('#edit-act-title');
   const editDescInput = container.querySelector('#edit-act-desc');
-  if (editTimeInput) editTimeInput.addEventListener('input', () => { state.editingTime = editTimeInput.value; });
+  const editLocInput = container.querySelector('#edit-act-location');
+  if (editLocInput) editLocInput.addEventListener('input', () => { state.editingLocation = editLocInput.value; });
+  if (editTimeInput) {
+    editTimeInput.addEventListener('input', () => {
+      editTimeInput.value = maskTime(editTimeInput.value);
+      state.editingTime = editTimeInput.value;
+    });
+  }
   if (editTitleInput) editTitleInput.addEventListener('input', () => { state.editingTitle = editTitleInput.value; });
   if (editDescInput) editDescInput.addEventListener('input', () => { state.editingDesc = editDescInput.value; });
 
@@ -309,14 +374,22 @@ export function bindItinerarioEvents(container, state, activeTrip, { updateState
             editingActivityId: found.id,
             editingTitle: found.title,
             editingDesc: found.description,
+            editingLocation: found.location || '',
             editingTime: found.time,
           });
           break;
         }
       }
     } else if (action === 'cancel-edit-act') {
-      updateState({ editingActivityId: null });
+      updateState({ editingActivityId: null, activityError: '' });
     } else if (action === 'save-edit-act') {
+      const editTime24 = to24h(state.editingTime);
+      if (!editTime24) {
+        updateState({ activityError: 'Horário inválido. Use o formato 24h, por exemplo 14:30.' });
+        return;
+      }
+      state.activityError = '';
+      state.editingTime = editTime24;
       const dayNum = Number(btn.dataset.day);
       const updatedItinerary = activeTrip.itinerary.map((day) => {
         if (day.dayNumber !== dayNum) return day;
@@ -328,6 +401,7 @@ export function bindItinerarioEvents(container, state, activeTrip, { updateState
                   ...a,
                   title: state.editingTitle,
                   description: state.editingDesc,
+                  location: (state.editingLocation || '').trim(),
                   time: state.editingTime,
                 }
               : a
@@ -338,56 +412,7 @@ export function bindItinerarioEvents(container, state, activeTrip, { updateState
       onUpdateTrip({ ...activeTrip, itinerary: updatedItinerary });
     } else if (action === 'auto-recommend') {
       const dayNum = state.selectedDayNumber || 1;
-      const isLondon =
-        activeTrip.destination.toLowerCase().includes('londres') ||
-        activeTrip.destination.toLowerCase().includes('london');
-      const suggested = isLondon
-        ? [
-            {
-              id: `ai-1-${Date.now()}`,
-              time: '09:00 AM',
-              title: 'Torre de Londres & Big Ben',
-              description: 'Visitar a histórica ponte levadiça e fotografar os monumentos às margens do Tâmisa.',
-              icon: 'navigation',
-            },
-            {
-              id: `ai-2-${Date.now()}`,
-              time: '01:00 PM',
-              title: 'Chá da Tarde Clássico Inglês',
-              description: 'Degustar autênticos doces ingleses em confeitaria tradicional.',
-              icon: 'sparkles',
-            },
-            {
-              id: `ai-3-${Date.now()}`,
-              time: '04:00 PM',
-              title: 'Caminhada por Covent Garden',
-              description: 'Conferir apresentações culturais de rua e lojas artesanais locais.',
-              icon: 'compass',
-            },
-          ]
-        : [
-            {
-              id: `ai-1-${Date.now()}`,
-              time: '10:00 AM',
-              title: 'Passeio do Bondinho de Santa Teresa',
-              description: 'Andar de bondinho amarelo histórico por cima dos arcos da Lapa.',
-              icon: 'navigation',
-            },
-            {
-              id: `ai-2-${Date.now()}`,
-              time: '01:00 PM',
-              title: 'Almoço na Confeitaria Colombo',
-              description: 'Saborear tradicionais pratos e doces brasileiros em ambiente histórico.',
-              icon: 'sparkles',
-            },
-            {
-              id: `ai-3-${Date.now()}`,
-              time: '05:00 PM',
-              title: 'Pôr do sol no Arpoador',
-              description: 'Apreciar o pôr do sol à beira-mar com vista para o Morro Dois Irmãos.',
-              icon: 'compass',
-            },
-          ];
+      const suggested = getSuggestedActivities(activeTrip.destination);
 
       const updatedItinerary = activeTrip.itinerary.map((d) => ({ ...d, activities: [...d.activities] }));
       let targetDay = updatedItinerary.find((d) => d.dayNumber === dayNum);

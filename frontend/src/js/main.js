@@ -1,6 +1,6 @@
 import { ASSETS } from './data.js';
 import { apiDeleteTrip, apiLogout } from './api.js';
-import { defaultWizardDates, todayIso } from './dates.js';
+import { brToIso, defaultWizardDates, todayIso } from './dates.js';
 import { createTripOnServer, fetchTrip, loadAllTrips, syncTripChanges } from './sync.js';
 import { icon } from './icons.js';
 import {
@@ -9,6 +9,8 @@ import {
   saveActiveTripId,
   saveSessionAuth,
   saveUserName,
+  loadAvatar,
+  saveAvatar,
 } from './store.js';
 import { escapeHtml, renderBrandLogo, renderImgWithFallback } from './utils.js';
 import { bindLandingEvents, renderLandingPage } from './views/landing.js';
@@ -47,10 +49,18 @@ const state = {
   // Itinerario state
   selectedDayNumber: 1,
   newActivityTitle: '',
+  newActivityLocation: '',
+  newActivityTime: '09:00',
+  editingLocation: '',
+  tripEditError: '',
+  editingBudget: false,
+  budgetError: '',
   editingActivityId: null,
   editingTitle: '',
   editingDesc: '',
-  editingTime: '10:00 AM',
+  editingTime: '10:00',
+  activityError: '',
+  avatarUrl: loadAvatar(),
   activePin: null,
   mapZoom: 1,
 
@@ -65,6 +75,7 @@ const state = {
   selectedExpenseCategory: 'Tudo',
   showAddExpenseModal: false,
   expenseModalError: '',
+  editingExpenseId: null,
   expenseFeedback: '',
   expenseDraft: {
     description: '',
@@ -195,6 +206,17 @@ function handleLogout() {
 function handleUpdateTrip(updatedTrip) {
   const oldTrip = state.tripsList.find((t) => t.id === updatedTrip.id);
   if (!oldTrip) return;
+  // trava de segurança: nenhuma data NOVA da viagem pode estar no passado
+  const today = todayIso();
+  const newStart = brToIso(updatedTrip.startDate);
+  const newEnd = brToIso(updatedTrip.endDate);
+  if (
+    (updatedTrip.startDate !== oldTrip.startDate && newStart && newStart < today) ||
+    (updatedTrip.endDate !== oldTrip.endDate && newEnd && newEnd < today)
+  ) {
+    updateState({ tripEditError: 'Não é possível usar uma data anterior a hoje.' });
+    return;
+  }
   runSync(async () => {
     await syncTripChanges(oldTrip, updatedTrip);
     const fresh = await fetchTrip(updatedTrip.id);
@@ -234,6 +256,11 @@ function handleDeleteTrip(tripId) {
 function handleChangeUserName(name) {
   saveUserName(name);
   updateState({ userName: name });
+}
+
+function handleChangeAvatar(dataUrl) {
+  saveAvatar(dataUrl);
+  updateState({ avatarUrl: dataUrl || '' });
 }
 
 function handleChangeActiveTripId(id) {
@@ -278,7 +305,7 @@ function renderWorkspaceHeader() {
         <div class="app-header__right">
           <button type="button" class="user-pill-trigger" data-nav="configuracoes" title="Perfil e Configurações">
             <div class="user-avatar-sm">
-              ${renderImgWithFallback(ASSETS.avatarImg, 'Foto de perfil', state.userName)}
+              ${renderImgWithFallback(state.avatarUrl || ASSETS.avatarImg, 'Foto de perfil', state.userName)}
             </div>
             <span class="user-name-label">${escapeHtml(state.userName)}</span>
           </button>
@@ -505,6 +532,7 @@ function render() {
       bindConfiguracoesEvents(viewport, state, activeTrip, {
         updateState,
         onChangeUserName: handleChangeUserName,
+        onChangeAvatar: handleChangeAvatar,
         onChangeActiveTripId: handleChangeActiveTripId,
         onUpdateTrip: handleUpdateTrip,
         onDeleteTrip: handleDeleteTrip,

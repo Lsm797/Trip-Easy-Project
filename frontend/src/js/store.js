@@ -266,3 +266,23 @@ export function resetAllPlatformData() {
     platformSettings: clone(DEFAULT_PLATFORM_SETTINGS),
   };
 }
+
+// ---- foto de perfil (guardada só neste navegador, já reduzida) ----
+const AVATAR_KEY = 'tripeasy_avatar';
+
+export function loadAvatar() {
+  try {
+    return localStorage.getItem(AVATAR_KEY) || '';
+  } catch {
+    return '';
+  }
+}
+
+export function saveAvatar(dataUrl) {
+  try {
+    if (dataUrl) localStorage.setItem(AVATAR_KEY, dataUrl);
+    else localStorage.removeItem(AVATAR_KEY);
+  } catch {
+    /* sem espaço ou bloqueado: a foto só vale nesta sessão */
+  }
+}

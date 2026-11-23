@@ -1,4 +1,4 @@
-import { ASSETS, POPULAR_DESTINATIONS, resolveDestinationImage } from '../data.js';
+import { ASSETS, POPULAR_DESTINATIONS, resolveDestinationImage, searchCities } from '../data.js';
 import { icon } from '../icons.js';
 import { defaultWizardDates, formatLongDate, todayIso, validateTripPeriod } from '../dates.js';
 import { escapeHtml, renderImgWithFallback } from '../utils.js';
@@ -13,6 +13,17 @@ const INTEREST_OPTIONS = [
   { id: 'esportes', label: 'Aventura & Esportes' },
   { id: 'fotografia', label: 'Mirantes & Fotos' },
 ];
+
+function renderCityResults(query) {
+  const results = searchCities(query);
+  if (results.length === 0) return '';
+  return results.map((c) => `
+    <button type="button" class="city-result" role="option" data-action="select-popular-dest" data-dest="${escapeHtml(c.name)}">
+      ${icon('mapPin', 'icon-sm')}
+      <span><strong>${escapeHtml(c.name)}</strong> <small>${escapeHtml(c.country)}</small></span>
+    </button>
+  `).join('');
+}
 
 export function renderCreatorView(state) {
   const w = state.wizard;
@@ -56,7 +67,7 @@ export function renderCreatorView(state) {
           </div>
 
           <div style="padding:1.5rem;" class="stack-md">
-            <div>
+            <div style="position:relative;">
               <label class="field-label" for="wizard-destination-input">Buscar Destino</label>
               <div class="input-with-icon">
                 <span class="input-with-icon__left">${icon('mapPin', 'icon-md')}</span>
@@ -67,8 +78,10 @@ export function renderCreatorView(state) {
                   style="height:50px;"
                   placeholder="Digite qualquer destino: Salvador, Paris, Bonito..."
                   value="${escapeHtml(w.destination)}"
+                  autocomplete="off"
                 />
               </div>
+              <div id="wizard-city-results" class="city-results" role="listbox">${renderCityResults(w.destination)}</div>
             </div>
 
             <div class="stack-sm">
@@ -284,6 +297,8 @@ export function bindCreatorEvents(container, state, { updateState, onCreateTrip 
       const nextBtn = container.querySelector('[data-action="wizard-step"][data-step="2"]');
       const stepNodes = container.querySelectorAll('.stepper-node[data-step="2"], .stepper-node[data-step="3"]');
       const hasVal = Boolean(destInput.value.trim());
+      const resultsBox = container.querySelector('#wizard-city-results');
+      if (resultsBox) resultsBox.innerHTML = renderCityResults(destInput.value);
       if (nextBtn) nextBtn.disabled = !hasVal;
       stepNodes.forEach((n) => {
         n.disabled = !hasVal;
@@ -373,14 +388,14 @@ export function bindCreatorEvents(container, state, { updateState, onCreateTrip 
             activities: [
               {
                 id: `act-gen-1-${Date.now()}`,
-                time: '10:00 AM',
+                time: '10:00',
                 title: `Chegada em ${dest}`,
                 description: 'Check-in na hospedagem e breve reconhecimento da vizinhança.',
                 icon: 'mapPin',
               },
               {
                 id: `act-gen-2-${Date.now()}`,
-                time: '04:00 PM',
+                time: '16:00',
                 title: 'Explorar Pontos Principais',
                 description: 'Sair para tirar as primeiras fotos e conferir monumentos locais.',
                 icon: 'compass',
@@ -393,7 +408,7 @@ export function bindCreatorEvents(container, state, { updateState, onCreateTrip 
             activities: [
               {
                 id: `act-gen-3-${Date.now()}`,
-                time: '09:00 AM',
+                time: '09:00',
                 title: 'Passeio Cultural Orientado',
                 description: 'Visitar museus renomados ou parques ecológicos característicos.',
                 icon: 'navigation',

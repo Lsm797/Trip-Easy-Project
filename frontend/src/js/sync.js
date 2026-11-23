@@ -62,7 +62,8 @@ function buildItinerary(activities, startIso) {
         id: String(a.id),
         time: from24h(a.horario),
         title: a.titulo,
-        description: a.observacao || a.local || '',
+        description: a.observacao || '',
+        location: a.local || '',
         icon: 'compass',
       }));
     days.push({ dayNumber: n, dateStr: formatDayLabel(dayIso), activities: items });
@@ -145,7 +146,7 @@ function activityBody(trip, dayNumber, act) {
     data: addDaysIso(startIsoOf(trip), dayNumber - 1),
     horario: to24h(act.time),
     titulo: String(act.title || '').trim().slice(0, 150),
-    local: null,
+    local: String(act.location || '').trim().slice(0, 150) || null,
     observacao: act.description || null,
   };
 }
@@ -183,6 +184,9 @@ function tripFieldsChanged(a, b) {
 // Compara a viagem antiga (já confirmada pelo servidor) com a nova e envia só o que mudou.
 export async function syncTripChanges(oldTrip, newTrip) {
   const id = oldTrip.id;
+
+  // se a data de ida mudou, as atividades precisam ser regravadas com as novas datas
+  const startChanged = oldTrip.startDate !== newTrip.startDate;
 
   if (tripFieldsChanged(oldTrip, newTrip)) {
     await apiUpdateTrip(id, tripBody(newTrip));
@@ -222,7 +226,9 @@ export async function syncTripChanges(oldTrip, newTrip) {
       before.dayNumber !== dayNumber ||
       before.act.title !== act.title ||
       before.act.description !== act.description ||
-      before.act.time !== act.time
+      (before.act.location || '') !== (act.location || '') ||
+      before.act.time !== act.time ||
+      startChanged
     ) {
       await apiUpdateActivity(actId, activityBody(newTrip, dayNumber, act));
     }

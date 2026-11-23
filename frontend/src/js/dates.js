@@ -86,14 +86,17 @@ export function to24h(text) {
   return `${pad(hours)}:${pad(minutes)}`;
 }
 
-// 'HH:mm' ou 'HH:mm:ss' -> '02:30 PM'
+// 'HH:mm' ou 'HH:mm:ss' -> 'HH:mm' (formato brasileiro, 24h)
 export function from24h(text) {
   const match = /^(\d{1,2}):(\d{2})/.exec(text || '');
   if (!match) return '';
-  const hours = Number(match[1]);
-  const suffix = hours >= 12 ? 'PM' : 'AM';
-  const h12 = hours % 12 === 0 ? 12 : hours % 12;
-  return `${pad(h12)}:${match[2]} ${suffix}`;
+  return `${pad(Number(match[1]))}:${match[2]}`;
+}
+
+// Máscara de digitação: '0930' -> '09:30'
+export function maskTime(value) {
+  const digits = String(value || '').replace(/\D/g, '').slice(0, 4);
+  return digits.length > 2 ? `${digits.slice(0, 2)}:${digits.slice(2)}` : digits;
 }
 
 export function defaultWizardDates() {
