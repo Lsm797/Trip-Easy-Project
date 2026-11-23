@@ -40,23 +40,6 @@ O TripEasy funciona como um **hub único**: destino, datas, orçamento, roteiro,
 | Disponibilidade com manutenção programada | Confiabilidade |
 | Módulos independentes | Manutenibilidade / Escalabilidade |
 
-## Status do desenvolvimento
-
-| Módulo | Backend | Frontend |
-| --- | :---: | :---: |
-| Cadastro, login e logout | ✅ | ✅ |
-| Viagens (CRUD) | ✅ | ✅ |
-| Roteiro (atividades por dia) | ✅ | ✅ |
-| Checklist | ✅ | ✅ |
-| Despesas e resumo do orçamento | ✅ | ✅ |
-| Preferências de viagem | ✅ | ⏳ |
-| Lembretes | ⏳ | ⏳ |
-| Participantes e compartilhamento da viagem | ⏳ | ⏳ |
-| Planos e assinaturas | ⏳ | ⏳ |
-| Painel do administrador | ⏳ | ⏳ |
-| Sugestão automática de roteiro e notificações | 💡 futuro | 💡 futuro |
-
-✅ pronto · ⏳ em desenvolvimento · 💡 ideia para versões futuras
 
 ## Tecnologias
 
@@ -235,5 +218,6 @@ Não envie alterações direto para a `main`. Nunca envie senhas, arquivos `.env
 - Daniele Soares
 - Raylla Bianka
 - Luis Gustavo
+- Gabriel Gomes
 
 **Orientador:** Vinicius Nepomuceno
