@@ -12,6 +12,9 @@ import br.com.tripeasy.service.ViagemService;
 import br.com.tripeasy.model.Viagem;
 import java.util.List;
 import jakarta.validation.Valid;
+import jakarta.validation.groups.Default;
+import org.springframework.validation.annotation.Validated;
+import br.com.tripeasy.dto.ValidacaoCadastro;
 import br.com.tripeasy.dto.ViagemRequestDTO;
 
 import br.com.tripeasy.dto.ViagemResponseDTO;
@@ -48,7 +51,7 @@ public class ViagemController {
 
     @PostMapping
     public ResponseEntity<ViagemResponseDTO> cadastrar(
-            @Valid @RequestBody ViagemRequestDTO dados) {
+            @Validated({Default.class, ValidacaoCadastro.class}) @RequestBody ViagemRequestDTO dados) {
 
         Usuario usuario = usuarioAutenticado();
 

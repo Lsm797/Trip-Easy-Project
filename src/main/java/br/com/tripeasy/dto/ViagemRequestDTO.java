@@ -22,11 +22,11 @@ public class ViagemRequestDTO {
     private String destino;
 
     @NotNull(message = "A data de ida é obrigatória.")
-    @FutureOrPresent(message = "A data de ida não pode estar no passado.")
+    @FutureOrPresent(groups = ValidacaoCadastro.class, message = "A data de ida não pode estar no passado.")
     private LocalDate dataIda;
 
     @NotNull(message = "A data de volta é obrigatória.")
-    @FutureOrPresent(message = "A data de volta não pode estar no passado.")
+    @FutureOrPresent(groups = ValidacaoCadastro.class, message = "A data de volta não pode estar no passado.")
     private LocalDate dataVolta;
 
     @NotNull(message = "O orçamento é obrigatório.")
