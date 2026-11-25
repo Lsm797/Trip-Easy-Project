@@ -43,7 +43,9 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
                     "/api/usuarios/cadastro",
-                    "/api/usuarios/login"
+                    "/api/usuarios/login",
+                    "/api/usuarios/recuperar-senha",
+                    "/api/usuarios/redefinir-senha"
                 ).permitAll()
                 .anyRequest().authenticated()
             );

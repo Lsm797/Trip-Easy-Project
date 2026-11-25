@@ -3,6 +3,7 @@ package br.com.tripeasy.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public class UsuarioCadastroDTO {
@@ -17,7 +18,9 @@ public class UsuarioCadastroDTO {
     private String email;
 
     @NotBlank(message = "A senha é obrigatória.")
-    @Size(min = 6, max = 72, message = "A senha deve ter entre 6 e 72 caracteres.")
+    @Pattern(
+            regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z0-9]).{6,72}$",
+            message = "A senha deve ter de 6 a 72 caracteres, com letra maiúscula, letra minúscula, número e caractere especial.")
     private String senha;
 
     public String getNome() {
