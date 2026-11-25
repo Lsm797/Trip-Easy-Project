@@ -1,4 +1,4 @@
-import { ASSETS } from '../data.js';
+import { mountMap } from '../map.js';
 import { icon } from '../icons.js';
 import { escapeHtml, formatBRL, renderImgWithFallback } from '../utils.js';
 
@@ -178,7 +178,8 @@ export function renderDashboardView(state, activeTrip) {
 
         <!-- 5. Accommodation Map Preview -->
         <div class="surface-card map-preview-card col-span-4">
-          ${renderImgWithFallback(ASSETS.mapImg, 'Preview do mapa da hospedagem', activeTrip.destination)}
+          <div id="dashboard-map" class="leaflet-host" aria-label="Mapa do destino"
+            data-lodging="${escapeHtml(lodgingExpense ? lodgingExpense.description : '')}"></div>
           <div class="map-preview-overlay">
             <div class="map-preview-inner">
               <span style="padding:0.5rem;background:var(--brand-50);color:var(--brand-600);border-radius:0.65rem;display:flex;flex-shrink:0;">
@@ -227,6 +228,17 @@ export function renderDashboardView(state, activeTrip) {
 }
 
 export function bindDashboardEvents(container, state, activeTrip, { updateState, onUpdateTrip }) {
+  const mapEl = container.querySelector('#dashboard-map');
+  if (mapEl && activeTrip) {
+    const lodging = mapEl.dataset.lodging || '';
+    mountMap(mapEl, {
+      key: `dash-${activeTrip.id}`,
+      destination: activeTrip.destination,
+      pins: lodging ? [{ id: 'lodging', title: lodging, location: lodging }] : [],
+      interactive: false,
+    });
+  }
+
   container.addEventListener('change', (e) => {
     const checkbox = e.target.closest('[data-action="toggle-task"]');
     if (!checkbox || !activeTrip) return;

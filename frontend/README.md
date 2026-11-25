@@ -6,7 +6,7 @@ Aplicativo web de planejamento de viagens feito com HTML, CSS e JavaScript puro 
 
 - **Página inicial** com login e cadastro
 - **Dashboard** da viagem
-- **Itinerário** (roteiro por dia)
+- **Itinerário** (roteiro por dia, com mapa real OpenStreetMap)
 - **Checklist** (itens por categoria, progresso, busca e filtros)
 - **Despesas**
 - **Criar viagem**
@@ -48,6 +48,8 @@ src/
     ├── api.js         # chamadas ao backend (fetch)
     ├── sync.js        # converte dados entre frontend e API e envia as mudanças
     ├── dates.js       # datas, horários e validação do período da viagem
+    ├── map.js         # mapa real (Leaflet + OpenStreetMap) e busca de coordenadas (Nominatim)
+    ├── password.js    # regra de senha forte
     ├── store.js       # sessão e configurações locais (localStorage)
     ├── data.js        # dados de exemplo e imagens
     ├── utils.js, icons.js

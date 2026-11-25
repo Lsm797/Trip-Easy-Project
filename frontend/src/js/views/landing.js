@@ -1,7 +1,15 @@
 import { ASSETS } from '../data.js';
 import { icon } from '../icons.js';
-import { apiLogin, apiRegister, knownUserName, rememberUserName } from '../api.js';
+import {
+  apiLogin,
+  apiRegister,
+  apiRequestPasswordReset,
+  apiResetPassword,
+  knownUserName,
+  rememberUserName,
+} from '../api.js';
 import { escapeHtml, renderBrandLogo, renderImgWithFallback } from '../utils.js';
+import { PASSWORD_HINT, isValidEmail, validatePassword } from '../password.js';
 
 export function renderLandingPage(state) {
   const { authMode, showPassword, authForm, authError, authSuccess } = state;
@@ -255,6 +263,17 @@ export function renderLandingPage(state) {
 
 function renderAuthModal({ authMode, showPassword, authForm, authError, authSuccess }) {
   const isLogin = authMode === 'login';
+  const isForgot = authMode === 'forgot';
+  const isReset = authMode === 'reset';
+  const isRegister = authMode === 'register';
+  const titles = {
+    login: ['Acessar Conta', 'Digite suas credenciais de acesso.'],
+    register: ['Criar Nova Conta', 'Preencha os dados abaixo gratuitamente.'],
+    forgot: ['Recuperar Senha', 'Informe o e-mail da conta para gerar um código de recuperação.'],
+    reset: ['Criar Nova Senha', 'Digite o código recebido e escolha a nova senha.'],
+  };
+  const [modalTitle, modalSubtitle] = titles[authMode] || titles.login;
+  const submitLabel = { login: 'Entrar', register: 'Cadastrar', forgot: 'Enviar código', reset: 'Redefinir senha' }[authMode] || 'Entrar';
   return `
     <div class="modal-backdrop" data-action="close-auth-backdrop" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
       <div class="modal-card animate-modal-in">
@@ -268,10 +287,10 @@ function renderAuthModal({ authMode, showPassword, authForm, authError, authSucc
         <div class="modal-body">
           <div style="margin-bottom:1.25rem;">
             <h3 id="auth-modal-title" style="margin:0;font-size:1.15rem;font-weight:800;color:var(--stone-900);">
-              ${isLogin ? 'Acessar Conta' : 'Criar Nova Conta'}
+              ${modalTitle}
             </h3>
             <p style="margin:0.25rem 0 0;font-size:0.78rem;font-weight:500;color:var(--stone-500);">
-              ${isLogin ? 'Digite suas credenciais de acesso.' : 'Preencha os dados abaixo gratuitamente.'}
+              ${modalSubtitle}
             </p>
           </div>
 
@@ -279,7 +298,7 @@ function renderAuthModal({ authMode, showPassword, authForm, authError, authSucc
           ${authSuccess ? `<div class="feedback-banner feedback-banner--success">${icon('checkCircle', 'icon-sm')}<span>${escapeHtml(authSuccess)}</span></div>` : ''}
 
           <form id="auth-form" class="stack-sm">
-            ${!isLogin ? `
+            ${isRegister ? `
               <div>
                 <label class="field-label" for="auth-name-field">Seu Nome</label>
                 <div class="input-with-icon">
@@ -307,12 +326,34 @@ function renderAuthModal({ authMode, showPassword, authForm, authError, authSucc
                   class="field-input"
                   placeholder="nome@exemplo.com"
                   value="${escapeHtml(authForm.email)}"
+                  ${isReset ? 'readonly' : ''}
                 />
               </div>
             </div>
 
+            ${isReset ? `
+              <div>
+                <label class="field-label" for="auth-code-field">Código de 6 dígitos</label>
+                <div class="input-with-icon">
+                  <span class="input-with-icon__left">${icon('lock', 'icon-sm')}</span>
+                  <input
+                    type="text"
+                    id="auth-code-field"
+                    name="code"
+                    class="field-input"
+                    inputmode="numeric"
+                    maxlength="6"
+                    autocomplete="one-time-code"
+                    placeholder="000000"
+                    value="${escapeHtml(authForm.code || '')}"
+                  />
+                </div>
+              </div>
+            ` : ''}
+
+            ${!isForgot ? `
             <div>
-              <label class="field-label" for="auth-password-field">Senha</label>
+              <label class="field-label" for="auth-password-field">${isReset ? 'Nova senha' : 'Senha'}</label>
               <div class="input-with-icon">
                 <span class="input-with-icon__left">${icon('lock', 'icon-sm')}</span>
                 <input
@@ -333,10 +374,39 @@ function renderAuthModal({ authMode, showPassword, authForm, authError, authSucc
                   ${icon(showPassword ? 'eyeOff' : 'eye', 'icon-sm')}
                 </button>
               </div>
+              ${(isRegister || isReset) ? `
+                <p style="margin:0.35rem 0 0;font-size:0.7rem;color:var(--stone-400);">${PASSWORD_HINT}</p>
+              ` : ''}
             </div>
+            ` : ''}
+
+            ${isReset ? `
+              <div>
+                <label class="field-label" for="auth-confirm-field">Confirmar nova senha</label>
+                <div class="input-with-icon">
+                  <span class="input-with-icon__left">${icon('lock', 'icon-sm')}</span>
+                  <input
+                    type="${showPassword ? 'text' : 'password'}"
+                    id="auth-confirm-field"
+                    name="confirm"
+                    class="field-input"
+                    placeholder="••••••••"
+                    value="${escapeHtml(authForm.confirm || '')}"
+                  />
+                </div>
+              </div>
+            ` : ''}
+
+            ${isLogin ? `
+              <div style="text-align:right;margin-top:-0.25rem;">
+                <button type="button" class="btn btn-ghost btn-sm" style="color:var(--brand-600);font-weight:700;padding:0;min-height:auto;" data-action="switch-auth" data-mode="forgot">
+                  Esqueceu a senha?
+                </button>
+              </div>
+            ` : ''}
 
             <button type="submit" class="btn btn-primary" style="width:100%;margin-top:0.35rem;min-height:44px;font-weight:800;">
-              ${isLogin ? 'Entrar' : 'Cadastrar'}
+              ${submitLabel}
             </button>
           </form>
 
@@ -348,7 +418,19 @@ function renderAuthModal({ authMode, showPassword, authForm, authError, authSucc
           </div>
 
           <div style="text-align:center;">
-            ${isLogin ? `
+            ${isReset ? `
+              <button type="button" class="btn btn-ghost btn-sm" style="color:var(--brand-600);font-weight:700;" data-action="switch-auth" data-mode="forgot">
+                Não recebeu? Gerar novo código
+              </button>
+              <br />
+              <button type="button" class="btn btn-ghost btn-sm" style="color:var(--brand-600);font-weight:700;" data-action="switch-auth" data-mode="login">
+                Voltar para o login
+              </button>
+            ` : isForgot ? `
+              <button type="button" class="btn btn-ghost btn-sm" style="color:var(--brand-600);font-weight:700;" data-action="switch-auth" data-mode="login">
+                Voltar para o login
+              </button>
+            ` : isLogin ? `
               <button type="button" class="btn btn-ghost btn-sm" style="color:var(--brand-600);font-weight:700;" data-action="switch-auth" data-mode="register">
                 Não tem uma conta? Crie aqui
               </button>
@@ -403,7 +485,64 @@ export function bindLandingEvents(container, state, updateState, onLoginSuccess)
       const password = state.authForm.password || '';
       const name = (state.authForm.name || '').trim();
 
-      if (state.authMode === 'login') {
+      if (state.authMode === 'forgot') {
+        if (!email) {
+          updateState({ authError: 'Informe o e-mail da conta.' });
+          return;
+        }
+        if (!isValidEmail(email)) {
+          updateState({ authError: 'Informe um e-mail válido.' });
+          return;
+        }
+        submitting = true;
+        try {
+          await apiRequestPasswordReset(email);
+        } catch (err) {
+          submitting = false;
+          updateState({ authError: err.message || 'Não foi possível gerar o código.' });
+          return;
+        }
+        submitting = false;
+        updateState({
+          authMode: 'reset',
+          authError: '',
+          authSuccess: 'Código gerado! Digite-o abaixo para criar a nova senha.',
+          showPassword: false,
+          authForm: { name: '', email, password: '', code: '', confirm: '' },
+        });
+      } else if (state.authMode === 'reset') {
+        const code = (state.authForm.code || '').trim();
+        const confirm = state.authForm.confirm || '';
+        if (!/^\d{6}$/.test(code)) {
+          updateState({ authError: 'Digite o código de 6 dígitos.', authSuccess: '' });
+          return;
+        }
+        const passwordError = validatePassword(password);
+        if (passwordError) {
+          updateState({ authError: passwordError, authSuccess: '' });
+          return;
+        }
+        if (password !== confirm) {
+          updateState({ authError: 'A confirmação da senha não confere.', authSuccess: '' });
+          return;
+        }
+        submitting = true;
+        try {
+          await apiResetPassword(email, code, password);
+        } catch (err) {
+          submitting = false;
+          updateState({ authError: err.message || 'Não foi possível redefinir a senha.', authSuccess: '' });
+          return;
+        }
+        submitting = false;
+        updateState({
+          authMode: 'login',
+          authError: '',
+          authSuccess: 'Senha redefinida com sucesso! Entre com a nova senha.',
+          showPassword: false,
+          authForm: { name: '', email, password: '' },
+        });
+      } else if (state.authMode === 'login') {
         if (!email || !password) {
           updateState({ authError: 'Por favor, preencha todos os campos.' });
           return;
@@ -424,8 +563,9 @@ export function bindLandingEvents(container, state, updateState, onLoginSuccess)
           updateState({ authError: 'Por favor, preencha todos os campos.' });
           return;
         }
-        if (password.length < 6) {
-          updateState({ authError: 'A senha precisa ter no mínimo 6 caracteres.' });
+        const passwordError = validatePassword(password);
+        if (passwordError) {
+          updateState({ authError: passwordError });
           return;
         }
         submitting = true;

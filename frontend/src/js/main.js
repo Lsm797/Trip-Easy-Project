@@ -62,7 +62,6 @@ const state = {
   activityError: '',
   avatarUrl: loadAvatar(),
   activePin: null,
-  mapZoom: 1,
 
   // Checklist state
   checklistCategory: 'Tudo',

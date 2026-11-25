@@ -1,6 +1,7 @@
-import { ASSETS, getSuggestedActivities } from '../data.js';
+import { getSuggestedActivities } from '../data.js';
 import { icon } from '../icons.js';
 import { to24h, maskTime } from '../dates.js';
+import { mountMap } from '../map.js';
 import { escapeHtml, renderImgWithFallback } from '../utils.js';
 
 export function renderItinerarioView(state, activeTrip) {
@@ -20,7 +21,6 @@ export function renderItinerarioView(state, activeTrip) {
   }
 
   const selectedDayNumber = state.selectedDayNumber || 1;
-  const mapZoom = state.mapZoom || 1;
   const activePin = state.activePin;
 
   // Gather activities for map pins
@@ -235,40 +235,34 @@ export function renderItinerarioView(state, activeTrip) {
       </div>
 
       <div class="itinerary-map-col">
-        <div class="itinerary-map-canvas" style="transform:scale(${mapZoom});">
-          ${renderImgWithFallback(ASSETS.mapImg, 'Mapa interativo do destino', activeTrip.destination)}
-          ${allActivities.map((pin) => `
-            <button
-              type="button"
-              class="map-pin-cluster ${activePin === pin.id ? 'is-active' : ''}"
-              style="left:${pin.posLeft}%;top:${pin.posTop}%;background:transparent;border:none;padding:0;"
-              data-action="select-pin"
-              data-act-id="${escapeHtml(pin.id)}"
-              title="${escapeHtml(pin.title)}"
-            >
-              <span class="map-pin-label">${escapeHtml(pin.title)}</span>
-              <span class="map-pin-dot">${icon('mapPin', 'icon-sm')}</span>
-            </button>
-          `).join('')}
-          ${allActivities.length === 0 ? `
-            <div class="map-pin-cluster is-active" style="left:50%;top:48%;">
-              <span class="map-pin-label">${escapeHtml(activeTrip.destination.split(',')[0])}</span>
-              <span class="map-pin-dot">${icon('compass', 'icon-md')}</span>
-            </div>
-          ` : ''}
-        </div>
-
-        <div class="map-controls">
-          <button type="button" class="map-ctrl-btn" data-action="map-zoom-in" title="Aumentar zoom">${icon('zoomIn', 'icon-sm')}</button>
-          <button type="button" class="map-ctrl-btn" data-action="map-zoom-out" title="Diminuir zoom">${icon('zoomOut', 'icon-sm')}</button>
-          <button type="button" class="map-ctrl-btn" style="color:var(--brand-600);" data-action="map-recenter" title="Centralizar mapa">${icon('navigation', 'icon-sm')}</button>
-        </div>
+        <div id="itinerary-map" class="leaflet-host" aria-label="Mapa do destino"></div>
+        <div id="itinerary-map-note" class="map-note" hidden></div>
       </div>
     </div>
   `;
 }
 
 export function bindItinerarioEvents(container, state, activeTrip, { updateState, onUpdateTrip }) {
+  const mapEl = container.querySelector('#itinerary-map');
+  if (mapEl && activeTrip) {
+    const noteEl = container.querySelector('#itinerary-map-note');
+    mountMap(mapEl, {
+      key: activeTrip.id,
+      destination: activeTrip.destination,
+      pins: activeTrip.itinerary.flatMap((d) =>
+        d.activities.map((a) => ({ id: a.id, title: a.title, location: a.location || '' }))
+      ),
+      activeId: state.activePin || null,
+      interactive: true,
+      onSelect: (id) => updateState({ activePin: id }),
+      onStatus: (text) => {
+        if (!noteEl) return;
+        noteEl.textContent = text;
+        noteEl.hidden = !text;
+      },
+    });
+  }
+
   const daySelect = container.querySelector('#itinerary-day-select');
   if (daySelect) {
     daySelect.addEventListener('change', () => {
@@ -350,12 +344,6 @@ export function bindItinerarioEvents(container, state, activeTrip, { updateState
 
     if (action === 'select-pin') {
       updateState({ activePin: btn.dataset.actId });
-    } else if (action === 'map-zoom-in') {
-      updateState({ mapZoom: Math.min(1.6, Number(((state.mapZoom || 1) + 0.15).toFixed(2))) });
-    } else if (action === 'map-zoom-out') {
-      updateState({ mapZoom: Math.max(0.85, Number(((state.mapZoom || 1) - 0.15).toFixed(2))) });
-    } else if (action === 'map-recenter') {
-      updateState({ mapZoom: 1 });
     } else if (action === 'delete-act') {
       const dayNum = Number(btn.dataset.day);
       const actId = btn.dataset.actId;

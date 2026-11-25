@@ -40,6 +40,9 @@ async function request(method, path, body) {
 export const apiRegister = (nome, email, senha) => request('POST', '/api/usuarios/cadastro', { nome, email, senha });
 export const apiLogin = (email, senha) => request('POST', '/api/usuarios/login', { email, senha });
 export const apiLogout = () => request('POST', '/api/usuarios/logout');
+export const apiRequestPasswordReset = (email) => request('POST', '/api/usuarios/recuperar-senha', { email });
+export const apiResetPassword = (email, codigo, novaSenha) =>
+  request('POST', '/api/usuarios/redefinir-senha', { email, codigo, novaSenha });
 
 // ---- viagens ----
 export const apiListTrips = () => request('GET', '/api/viagens');

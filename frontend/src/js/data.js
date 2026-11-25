@@ -2,7 +2,6 @@ import rioImg from '../assets/images/rio.jpg';
 import londonImg from '../assets/images/london.jpg';
 import noronhaImg from '../assets/images/noronha.jpg';
 import gramadoImg from '../assets/images/gramado.jpg';
-import mapImg from '../assets/images/mapa.jpg';
 import avatarImg from '../assets/images/avatar.jpg';
 
 export const LOGO_ICON_SRC = '/assets/logo.png';
@@ -12,7 +11,6 @@ export const ASSETS = {
   londonImg,
   noronhaImg,
   gramadoImg,
-  mapImg,
   avatarImg,
 };
 
